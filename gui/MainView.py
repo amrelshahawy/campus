@@ -1,5 +1,7 @@
 
 import wx
+import os
+import webbrowser
 import GeneralView as gv
 import RESView as res
 import TransmissionView as tv
@@ -20,11 +22,15 @@ class MainView (wx.Frame):
         fileMenu.AppendSeparator()
         qmi = fileMenu.Append(wx.ID_EXIT, 'Exit', 'Quit application')
         menubar.Append(fileMenu, '&File')
+        helpMenu = wx.Menu()
+        hmi = helpMenu.Append(wx.ID_HELP, '&Quick Start')
+        menubar.Append(helpMenu, '&Help')
         self.SetMenuBar(menubar)
         self.CreateStatusBar()
         self.Bind(wx.EVT_MENU, self.OnOpen, omi)
         self.Bind(wx.EVT_MENU, self.OnSave, smi)
         self.Bind(wx.EVT_MENU, self.OnQuit, qmi)
+        self.Bind(wx.EVT_MENU, self.OnHelp, hmi)
 
         # Here we create a panel and a notebook on the panel
         p = wx.Panel(self)
@@ -77,7 +83,7 @@ class MainView (wx.Frame):
 
     def OnOpen(self, event):
         # Create open file dialog
-        openFileDialog = wx.FileDialog(self, "Open", "", "",
+        openFileDialog = wx.FileDialog(self, "Open", "./samples", "",
                                        "urbs files (*.json)|*.json",
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         openFileDialog.ShowModal()
@@ -89,7 +95,7 @@ class MainView (wx.Frame):
                 pub.sendMessage(EVENTS.LOAD_CONFIG, filename=fn)
 
     def OnSave(self, event):
-        openFileDialog = wx.FileDialog(self, "Save", "", "",
+        openFileDialog = wx.FileDialog(self, "Save", "./samples", "",
                                        "urbs files (*.json)|*.json",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         openFileDialog.ShowModal()
@@ -99,3 +105,7 @@ class MainView (wx.Frame):
 
     def OnQuit(self, event):
         self.Close()
+
+    def OnHelp(self, event):
+        file = 'file://' + os.path.realpath('./help/quickstart_gui.html')
+        webbrowser.open(file, new=2)  # in new tab

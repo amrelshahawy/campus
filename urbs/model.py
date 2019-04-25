@@ -6,15 +6,17 @@ from .input import *
 
 
 def create_model(data, dt=1, timesteps=None, objective='cost',
-                 dual=False):
+                 dual=True):
     """Create a pyomo ConcreteModel urbs object from given input data.
 
     Args:
-        data: a dict of 6 DataFrames with the keys 'commodity', 'process',
-            'transmission', 'storage', 'demand' and 'supim'.
-        dt: timestep duration in hours (default: 1)
-        timesteps: optional list of timesteps, default: demand timeseries
-        dual: set True to add dual variables to model (slower); default: False
+        - data: a dict of up to 12
+        - dt: timestep duration in hours (default: 1)
+        - timesteps: optional list of timesteps, default: demand timeseries
+        - objective: Either "cost" or "CO2" for choice of objective function,
+          default: "cost"
+        - dual: set True to add dual variables to model output
+          (marginally slower), default: True
 
     Returns:
         a pyomo ConcreteModel object
@@ -113,20 +115,20 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
 
     # cost_type
     m.cost_type = pyomo.Set(
-        initialize= m.cost_type_list,
+        initialize=m.cost_type_list,
         doc='Set of cost types (hard-coded)')
 
     # tuple sets
     m.sit_tuples = pyomo.Set(
-        within=m.stf*m.sit,
+        within=m.stf * m.sit,
         initialize=tuple(m.site_dict["area"].keys()),
         doc='Combinations of support timeframes and sites')
     m.com_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.com*m.com_type,
+        within=m.stf * m.sit * m.com * m.com_type,
         initialize=tuple(m.commodity_dict["price"].keys()),
         doc='Combinations of defined commodities, e.g. (2018,Mid,Elec,Demand)')
     m.pro_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.pro,
+        within=m.stf * m.sit * m.pro,
         initialize=tuple(m.process_dict["inv-cost"].keys()),
         doc='Combinations of possible processes, e.g. (2018,North,Coal plant)')
     m.com_stock = pyomo.Set(
@@ -137,7 +139,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
     if m.mode['int']:
         # tuples for operational status of technologies
         m.operational_pro_tuples = pyomo.Set(
-            within=m.sit*m.pro*m.stf*m.stf,
+            within=m.sit * m.pro * m.stf * m.stf,
             initialize=[(sit, pro, stf, stf_later)
                         for (sit, pro, stf, stf_later)
                         in op_pro_tuples(m.pro_tuples, m)],
@@ -147,7 +149,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
 
         # tuples for rest lifetime of installed capacities of technologies
         m.inst_pro_tuples = pyomo.Set(
-            within=m.sit*m.pro*m.stf,
+            within=m.sit * m.pro * m.stf,
             initialize=[(sit, pro, stf)
                         for (sit, pro, stf)
                         in inst_pro_tuples(m)],
@@ -169,13 +171,13 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
 
     # process tuples for area rule
     m.pro_area_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.pro,
+        within=m.stf * m.sit * m.pro,
         initialize=tuple(m.proc_area_dict.keys()),
         doc='Processes and Sites with area Restriction')
 
     # process input/output
     m.pro_input_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.pro*m.com,
+        within=m.stf * m.sit * m.pro * m.com,
         initialize=[(stf, site, process, commodity)
                     for (stf, site, process) in m.pro_tuples
                     for (s, pro, commodity) in tuple(m.r_in_dict.keys())
@@ -183,7 +185,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
         doc='Commodities consumed by process by site,'
             'e.g. (2020,Mid,PV,Solar)')
     m.pro_output_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.pro*m.com,
+        within=m.stf * m.sit * m.pro * m.com,
         initialize=[(stf, site, process, commodity)
                     for (stf, site, process) in m.pro_tuples
                     for (s, pro, commodity) in tuple(m.r_out_dict.keys())
@@ -192,7 +194,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
 
     # process tuples for maximum gradient feature
     m.pro_maxgrad_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.pro,
+        within=m.stf * m.sit * m.pro,
         initialize=[(stf, sit, pro)
                     for (stf, sit, pro) in m.pro_tuples
                     if m.process_dict['max-grad'][stf, sit, pro] < 1.0 / dt],
@@ -200,7 +202,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
 
     # process tuples for partial feature
     m.pro_partial_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.pro,
+        within=m.stf * m.sit * m.pro,
         initialize=[(stf, site, process)
                     for (stf, site, process) in m.pro_tuples
                     for (s, pro, _) in tuple(m.r_in_min_fraction_dict.keys())
@@ -208,7 +210,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
         doc='Processes with partial input')
 
     m.pro_partial_input_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.pro*m.com,
+        within=m.stf * m.sit * m.pro * m.com,
         initialize=[(stf, site, process, commodity)
                     for (stf, site, process) in m.pro_partial_tuples
                     for (s, pro, commodity) in tuple(m.r_in_min_fraction_dict
@@ -218,7 +220,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
             'e.g. (2020,Mid,Coal PP,Coal)')
 
     m.pro_partial_output_tuples = pyomo.Set(
-        within=m.stf*m.sit*m.pro*m.com,
+        within=m.stf * m.sit * m.pro * m.com,
         initialize=[(stf, site, process, commodity)
                     for (stf, site, process) in m.pro_partial_tuples
                     for (s, pro, commodity) in tuple(m.r_out_min_fraction_dict
@@ -249,7 +251,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
     # process capacity as expression object
     # (variable if expansion is possible, else static)
     m.cap_pro = pyomo.Expression(
-        m.pro_tuples, 
+        m.pro_tuples,
         rule=def_process_capacity_rule,
         doc='total process capacity')
 
@@ -258,11 +260,11 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
         within=pyomo.NonNegativeReals,
         doc='Power flow (MW) through process')
     m.e_pro_in = pyomo.Var(
-        m.tm, m.pro_tuples, m.com,
+        m.tm, m.pro_input_tuples,
         within=pyomo.NonNegativeReals,
         doc='Power flow of commodity into process (MW) per timestep')
     m.e_pro_out = pyomo.Var(
-        m.tm, m.pro_tuples, m.com,
+        m.tm, m.pro_output_tuples,
         within=pyomo.NonNegativeReals,
         doc='Power flow out of process (MW) per timestep')
 
@@ -280,7 +282,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
         m = add_time_variable_efficiency(m)
     else:
         m.pro_timevar_output_tuples = pyomo.Set(
-            within=m.stf*m.sit*m.pro*m.com,
+            within=m.stf * m.sit * m.pro * m.com,
             doc='empty set needed for (partial) process output')
 
     # Equation declarations
@@ -316,7 +318,7 @@ def create_model(data, dt=1, timesteps=None, objective='cost',
         doc='process input = process throughput * input ratio')
     m.def_process_output = pyomo.Constraint(
         m.tm, (m.pro_output_tuples - m.pro_partial_output_tuples -
-                m.pro_timevar_output_tuples),
+               m.pro_timevar_output_tuples),
         rule=def_process_output_rule,
         doc='process output = process throughput * output ratio')
     m.def_intermittent_supply = pyomo.Constraint(
@@ -465,6 +467,8 @@ def res_vertex_rule(m, tm, stf, sit, com, com_type):
 # stock commodity purchase == commodity consumption, according to
 # commodity_balance of current (time step, site, commodity);
 # limit stock commodity use per time step
+
+
 def res_stock_step_rule(m, tm, stf, sit, com, com_type):
     if com not in m.com_stock:
         return pyomo.Constraint.Skip
@@ -529,10 +533,11 @@ def def_process_capacity_rule(m, stf, sit, pro):
                 cap_pro = m.process_dict['inst-cap'][(stf, sit, pro)]
             else:
                 cap_pro = \
-                (sum(m.cap_pro_new[stf_built, sit, pro]
-                for stf_built in m.stf
-                if (sit, pro, stf_built, stf) in m.operational_pro_tuples) +
-                m.process_dict['inst-cap'][(min(m.stf), sit, pro)])
+                    (sum(m.cap_pro_new[stf_built, sit, pro]
+                         for stf_built in m.stf
+                         if (sit, pro, stf_built, stf)
+                         in m.operational_pro_tuples) +
+                     m.process_dict['inst-cap'][(min(m.stf), sit, pro)])
         else:
             cap_pro = sum(
                 m.cap_pro_new[stf_built, sit, pro]
@@ -545,8 +550,10 @@ def def_process_capacity_rule(m, stf, sit, pro):
             cap_pro = (m.cap_pro_new[stf, sit, pro] +
                        m.process_dict['inst-cap'][(stf, sit, pro)])
     return cap_pro
-        
+
 # process input power == process throughput * input ratio
+
+
 def def_process_input_rule(m, tm, stf, sit, pro, com):
     return (m.e_pro_in[tm, stf, sit, pro, com] ==
             m.tau_pro[tm, stf, sit, pro] * m.r_in_dict[(stf, pro, com)])
@@ -574,14 +581,14 @@ def res_process_throughput_by_capacity_rule(m, tm, stf, sit, pro):
 
 
 def res_process_maxgrad_lower_rule(m, t, stf, sit, pro):
-    return (m.tau_pro[t-1, stf, sit, pro] -
+    return (m.tau_pro[t - 1, stf, sit, pro] -
             m.cap_pro[stf, sit, pro] *
             m.process_dict['max-grad'][(stf, sit, pro)] * m.dt <=
             m.tau_pro[t, stf, sit, pro])
 
 
 def res_process_maxgrad_upper_rule(m, t, stf, sit, pro):
-    return (m.tau_pro[t-1, stf, sit, pro] +
+    return (m.tau_pro[t - 1, stf, sit, pro] +
             m.cap_pro[stf, sit, pro] *
             m.process_dict['max-grad'][(stf, sit, pro)] * m.dt >=
             m.tau_pro[t, stf, sit, pro])
@@ -633,9 +640,9 @@ def res_process_capacity_rule(m, stf, sit, pro):
 # used process area <= maximal process area
 def res_area_rule(m, stf, sit):
     if m.site_dict['area'][stf, sit] >= 0 and sum(
-                         m.process_dict['area-per-cap'][st, s, p]
-                         for (st, s, p) in m.pro_area_tuples
-                         if s == sit and st == stf) > 0:
+        m.process_dict['area-per-cap'][st, s, p]
+        for (st, s, p) in m.pro_area_tuples
+            if s == sit and st == stf) > 0:
         total_area = sum(m.cap_pro[st, s, p] *
                          m.process_dict['area-per-cap'][st, s, p]
                          for (st, s, p) in m.pro_area_tuples
@@ -684,7 +691,7 @@ def res_global_co2_budget_rule(m):
                                        stf_dist(stf, m))
 
         return (co2_output_sum <=
-                m.global_prop_dict['value'][m.stf, 'CO2 budget'])
+                m.global_prop_dict['value'][min(m.stf), 'CO2 budget'])
     else:
         return pyomo.Constraint.Skip
 
@@ -701,20 +708,20 @@ def res_global_cost_limit_rule(m):
 
 # Costs and emissions
 def def_costs_rule(m, cost_type):
-    """Calculate total costs by cost type.
-    Sums up process activity and capacity expansions
-    and sums them in the cost types that are specified in the set
-    m.cost_type. To change or add cost types, add/change entries
-    there and modify the if/elif cases in this function accordingly.
-    Cost types are
-      - Investment costs for process power, storage power and
-        storage capacity. They are multiplied by the investment
-        factors. Rest values of units are subtracted.
-      - Fixed costs for process power, storage power and storage
-        capacity.
-      - Variables costs for usage of processes, storage and transmission.
-      - Fuel costs for stock commodity purchase.
-    """
+    #Calculate total costs by cost type.
+    #Sums up process activity and capacity expansions
+    #and sums them in the cost types that are specified in the set
+    #m.cost_type. To change or add cost types, add/change entries
+    #there and modify the if/elif cases in this function accordingly.
+    #Cost types are
+    #  - Investment costs for process power, storage power and
+    #    storage capacity. They are multiplied by the investment
+    #    factors. Rest values of units are subtracted.
+    #  - Fixed costs for process power, storage power and storage
+    #    capacity.
+    #  - Variables costs for usage of processes, storage and transmission.
+    #  - Fuel costs for stock commodity purchase.
+
     if cost_type == 'Invest':
         cost = \
             sum(m.cap_pro_new[p] *

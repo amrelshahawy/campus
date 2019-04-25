@@ -29,16 +29,16 @@ def sort_plot_elements(elements):
 
     # calculate standard deviation
     std = pd.DataFrame(np.zeros_like(elements.tail(1)),
-                       index=elements.index[-1:]+1,
+                       index=elements.index[-1:] + 1,
                        columns=elements.columns)
     # calculate mean
     mean = pd.DataFrame(np.zeros_like(elements.tail(1)),
-                        index=elements.index[-1:]+1,
+                        index=elements.index[-1:] + 1,
                         columns=elements.columns)
     # calculate quotient
     quotient = pd.DataFrame(
         np.zeros_like(elements.tail(1)),
-        index=elements.index[-1:]+1,
+        index=elements.index[-1:] + 1,
         columns=elements.columns)
 
     for col in std.columns:
@@ -66,19 +66,19 @@ def plot(prob, stf, com, sit, dt, timesteps, timesteps_plot,
     with stored energy in a second subplot.
 
     Args:
-        prob: urbs model instance
-        com: commodity name to plot
-        sit: site name to plot
-        dt: length of each time step (unit: hours)
-        timesteps: modelled timesteps
-        timesteps_plot: timesteps to be plotted
-
-        power_name: optional string for 'power' label; default: 'Power'
-        power_unit: optional string for unit; default: 'MW'
-        energy_name: optional string for 'energy' label; default: 'Energy'
-        energy_unit: optional string for storage plot; default: 'MWh'
-        time_unit: optional string for time unit label; default: 'h'
-        figure_size: optional (width, height) tuple in inch; default: (16, 12)
+        - prob: urbs model instance
+        - stf: support timeframe
+        - com: commodity name to plot
+        - sit: site name to plot
+        - dt: length of each time step (unit: hours)
+        - timesteps: modelled timesteps
+        - timesteps_plot: timesteps to be plotted
+        - power_name: optional string for 'power' label; default: 'Power'
+        - power_unit: optional string for unit; default: 'MW'
+        - energy_name: optional string for 'energy' label; default: 'Energy'
+        - energy_unit: optional string for storage plot; default: 'MWh'
+        - time_unit: optional string for time unit label; default: 'h'
+        - figure_size: optional (width, height) tuple in inch; default: (16, 12)
 
     Returns:
         fig: figure handle
@@ -125,7 +125,7 @@ def plot(prob, stf, com, sit, dt, timesteps, timesteps_plot,
         # if so, show DSM subplot (even if delta == 0 for the whole time)
         df_dsm = get_input(prob, 'dsm')
         plot_dsm = df_dsm.loc[(sit, com),
-                            ['cap-max-do', 'cap-max-up']].sum().sum() > 0
+                              ['cap-max-do', 'cap-max-up']].sum().sum() > 0
     except (KeyError, TypeError):
         plot_dsm = False
 
@@ -163,7 +163,7 @@ def plot(prob, stf, com, sit, dt, timesteps, timesteps_plot,
 
     # stack plot for consumed commodities (divided by dt for power)
     sp00 = ax0.stackplot(hoursteps[1:],
-                         -consumed.values.T/dt[0],
+                         -consumed.values.T / dt[0],
                          labels=tuple(consumed.columns),
                          linewidth=0.15)
     # color
@@ -177,7 +177,7 @@ def plot(prob, stf, com, sit, dt, timesteps, timesteps_plot,
 
     # stack plot for created commodities (divided by dt for power)
     sp0 = ax0.stackplot(hoursteps[1:],
-                        created.values.T/dt[0],
+                        created.values.T / dt[0],
                         labels=tuple(created.columns),
                         linewidth=0.15)
 
@@ -223,12 +223,12 @@ def plot(prob, stf, com, sit, dt, timesteps, timesteps_plot,
 
     # PLOT DEMAND
     # line plot for demand (unshifted) commodities (divided by dt for power)
-    ax0.plot(hoursteps, original.values/dt[0], linewidth=0.8,
-            color=to_color('Unshifted'))
-     
-    # line plot for demand (in case of DSM mode: shifted) commodities 
+    ax0.plot(hoursteps, original.values / dt[0], linewidth=0.8,
+             color=to_color('Unshifted'))
+
+    # line plot for demand (in case of DSM mode: shifted) commodities
     # (divided by dt for power)
-    ax0.plot(hoursteps[1:], demand.values/dt[0], linewidth=1.0,
+    ax0.plot(hoursteps[1:], demand.values / dt[0], linewidth=1.0,
              color=to_color('Shifted'))
 
     # PLOT STORAGE
@@ -238,7 +238,7 @@ def plot(prob, stf, com, sit, dt, timesteps, timesteps_plot,
     # stack plot for stored commodities
     try:
         sp1 = ax1.stackplot(hoursteps, stored.values, linewidth=0.15)
-    except:
+    except BaseException:
         stored = pd.Series(0, index=hoursteps)
         sp1 = ax1.stackplot(hoursteps, stored.values, linewidth=0.15)
     if plot_dsm:
@@ -265,7 +265,7 @@ def plot(prob, stf, com, sit, dt, timesteps, timesteps_plot,
 
         # bar plot for DSM up-/downshift power (bar width depending on dt)
         ax2.bar(hoursteps,
-                deltademand.values/dt[0], width=0.8 * dt[0],
+                deltademand.values / dt[0], width=0.8 * dt[0],
                 color=to_color('Delta'),
                 edgecolor='none')
 
@@ -285,7 +285,7 @@ def plot(prob, stf, com, sit, dt, timesteps, timesteps_plot,
     else:                                          # time horizon <= a day
         steps_between_ticks = int(3 / dt[0])       # tick every three hours
 
-    hoursteps_plot_ = hoursteps_plot[(steps_between_ticks-1):]
+    hoursteps_plot_ = hoursteps_plot[(steps_between_ticks - 1):]
     hoursteps_plot_ = hoursteps_plot_[::steps_between_ticks]   # take hole h's
     xticks = np.insert(hoursteps_plot_, 0, hoursteps_plot[0])  # add 1st tstep
 
@@ -322,19 +322,21 @@ def result_figures(prob, figure_basename, timesteps, plot_title_prefix=None,
     """Create plots for multiple periods and sites and save them to files.
 
     Args:
-        prob: urbs model instance
-        figure_basename: relative filename prefix that is shared
-        plot_title_prefix: (optional) plot title identifier
-        plot_tuples: (optional) list of (sit, com) tuples to plot
-                     sit may be individual site names or lists of sites
-                     default: all demand (sit, com) tuples are plotted
-        plot_sites_name: (optional) dict of names for created plots
-        periods: (optional) dict of 'period name': timesteps_list items
-                 default: one period 'all' with all timesteps is assumed
-        extensions: (optional) list of file extensions for plot images
-                    default: png, pdf
-        **kwds: (optional) keyword arguments are forwarded to urbs.plot()
+        - prob: urbs model instance
+        - figure_basename: relative filename prefix that is shared;
+        - timesteps: global varaible of modeled timesteps;
+        - plot_title_prefix: (optional) plot title identifier;
+        - plot_tuples: (optional) list of (sit, com) tuples to plot sit may be
+          individual site names or lists of sites, default: all demand
+          (sit, com) tuples are plotted;
+        - plot_sites_name: (optional) dict of names for created plots;
+        - periods: (optional) dict of 'period name': timesteps_list items,
+          default: one period 'all' with all timesteps is assumed;
+        - extensions: (optional) list of file extensions for plot images,
+          default: png, pdf;
+        - ``**kwds: (optional) keyword arguments are forwarded to urbs.plot()``
     """
+
     # retrieve parameter 'dt' from the model
     dt = get_entity(prob, 'dt')
 
@@ -361,7 +363,7 @@ def result_figures(prob, figure_basename, timesteps, plot_title_prefix=None,
 
         try:
             plot_sites_name[sit]
-        except:
+        except BaseException:
             plot_sites_name[sit] = str(sit)
 
         for period, periodrange in periods.items():
@@ -404,7 +406,7 @@ def to_color(obj=None):
     if obj is None:
         obj = random()
     try:
-        color = tuple(rgb/255.0 for rgb in COLORS[obj])
+        color = tuple(rgb / 255.0 for rgb in COLORS[obj])
     except KeyError:
         # random deterministic color
         import hashlib

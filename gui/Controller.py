@@ -15,6 +15,7 @@ import SitesForm as sf
 import DataConfig as config
 import Errors as ERR
 import copy as cpy
+import win32api
 import json
 import time
 import urbs
@@ -407,7 +408,7 @@ class Controller():
 
     def Run(self):
 
-        result_name = 'Campus'
+        result_name = self._resModel.GetResultName()
         result_dir = urbs.prepare_result_directory(
             result_name,
             config.DataConfig.RESULT_DIR)  # name + time stamp
@@ -475,20 +476,22 @@ class Controller():
             if k in self._resModel._scenarios:
                 scenarios.append(v)
 
+        # save config file
+        self.OnSaveConfig(result_dir + "/config.json")
+
         # print(scenarios)
         for scenario in scenarios:
             # print(scenario)
-            urbs.run_scenario(
+            urbs.run_scenario_df(
                 data,
                 Solver,
                 timesteps,
                 scenario,
-                result_dir,
+                win32api.GetShortPathName(result_dir),
                 dt,
                 objective,
                 plot_tuples=plot_tuples,
                 plot_sites_name=plot_sites_name,
                 plot_periods=plot_periods,
                 report_tuples=report_tuples,
-                report_sites_name=report_sites_name,
-                t_read=t_read)
+                report_sites_name=report_sites_name)
